@@ -4,9 +4,9 @@ module Fission
   , module Fission.Config.Types
   ) where
 
-import Fission.Prelude
-import Fission.Types
-import Fission.Config.Types
+import           Fission.Config.Types
+import           Fission.Prelude
+import           Fission.Types
 
 -- | Run actions described by a @Fission@ type
 runFission :: MonadIO m => Config -> Fission a -> m a

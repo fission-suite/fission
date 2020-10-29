@@ -1,26 +1,26 @@
 -- | Configuration types
 module Fission.Config.Types (Config (..)) where
 
-import qualified Network.HTTP.Client as HTTP
+import qualified Network.HTTP.Client                    as HTTP
 import           Network.IPFS.CID.Types
 
-import qualified Network.AWS.Auth   as AWS
-import qualified Network.IPFS.Types as IPFS
+import qualified Network.AWS.Auth                       as AWS
+import qualified Network.IPFS.Types                     as IPFS
 
 import           Data.Pool
-import           Database.Persist.Sql (SqlBackend)
+import           Database.Persist.Sql                   (SqlBackend)
 
 import           Fission.User.DID.Types
 
-import           Fission.Prelude
 import qualified Fission.Platform.Heroku.ID.Types       as Heroku
 import qualified Fission.Platform.Heroku.Password.Types as Heroku
+import           Fission.Prelude
 
-import qualified Fission.AWS.Types as AWS
-import           Fission.URL.Types as URL
+import qualified Fission.AWS.Types                      as AWS
+import           Fission.URL.Types                      as URL
 import           Fission.Web.Types
 
-import qualified Fission.Email.SendInBlue.Types as SIB
+import qualified Fission.Email.SendInBlue.Types         as SIB
 
 -- | The top level 'Fission' application 'RIO' configuration
 data Config = Config

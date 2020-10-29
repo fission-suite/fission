@@ -2,13 +2,13 @@ module Fission.Internal.Mock.Config.Types (Config (..)) where
 
 import           Network.AWS.Route53
 
-import           Network.IPFS.Client.Pin            as Network.Pin
-import           Network.IPFS.File.Types            as File
-import           Network.IPFS.Process.Error         as Process
-import qualified Network.IPFS.Types                 as IPFS
+import           Network.IPFS.Client.Pin             as Network.Pin
+import           Network.IPFS.File.Types             as File
+import           Network.IPFS.Process.Error          as Process
+import qualified Network.IPFS.Types                  as IPFS
 
 import           Database.Esqueleto
-import           Network.Wai                        as Wai
+import           Network.Wai                         as Wai
 
 import           Servant
 import           Servant.Client
@@ -17,12 +17,13 @@ import           Servant.Server.Experimental.Auth
 import           Fission.Models
 import           Fission.Prelude
 
-import qualified Fission.IPFS.DNSLink.Class         as DNSLink
+import qualified Fission.IPFS.DNSLink.Class          as DNSLink
 
-import           Fission.Authorization.Types
-import qualified Fission.AWS.Types                  as AWS
-import qualified Fission.Platform.Heroku.Auth.Types as Heroku
-import           Fission.URL                        as URL
+import qualified Fission.Authorization.Session.Types as Authorization
+
+import qualified Fission.AWS.Types                   as AWS
+import qualified Fission.Platform.Heroku.Auth.Types  as Heroku
+import           Fission.URL                         as URL
 import           Fission.User.DID.Types
 
 data Config = Config
@@ -36,7 +37,7 @@ data Config = Config
   , linkedPeers     :: NonEmpty IPFS.Peer
   , userVerifier    :: AuthHandler Wai.Request (Entity User)
   , didVerifier     :: AuthHandler Wai.Request DID
-  , authVerifier    :: AuthHandler Wai.Request Authorization
+  , authVerifier    :: AuthHandler Wai.Request (Authorization.Session)
   , herokuVerifier  :: BasicAuthCheck Heroku.Auth
   , forceAuthed     :: Bool
   , localIPFSCall   :: Either Process.Error Process.RawMessage

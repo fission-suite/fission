@@ -25,6 +25,10 @@ module Fission.Prelude
   , module Fission.Internal.Log
   , module Fission.Internal.Time
   , module Fission.Internal.MonadDB
+  , module Fission.Internal.STM.Class
+
+  , module Fission.PartialOrder
+  , module Fission.TotalOrder.Types
 
   , module Flow
 
@@ -109,9 +113,13 @@ import           Test.QuickCheck.Instances                   ()
 
 import           Web.PathPieces
 
+import           Fission.PartialOrder
+import           Fission.TotalOrder.Types
+
 import           Fission.Internal.Log
 import           Fission.Internal.MonadDB
 import           Fission.Internal.Orphanage.OpenUnion        ()
+import           Fission.Internal.STM.Class
 import           Fission.Internal.Time
 import           Fission.Internal.UTF8                       (displayLazyBS,
                                                               putText,

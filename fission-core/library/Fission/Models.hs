@@ -7,6 +7,8 @@
 
 module Fission.Models where
 
+import qualified Crypto.PubKey.RSA                         as RSA
+
 import           Database.Persist.Postgresql
 import           Database.Persist.TH
 
@@ -17,13 +19,13 @@ import           Data.UUID
 import           Network.IPFS.Bytes.Types
 import           Network.IPFS.CID.Types
 
-import qualified Fission.Internal.UTF8                     as UTF8
 import           Fission.Prelude
+
+import qualified Fission.Internal.UTF8                     as UTF8
 
 import           Fission.Platform.Heroku.Region.Types
 import           Fission.Security
 
-import qualified Crypto.PubKey.RSA                         as RSA
 import qualified Fission.Key                               as Key
 import           Fission.URL
 
@@ -33,6 +35,9 @@ import           Fission.User.Role.Types
 import           Fission.User.Username.Types
 
 import qualified Fission.AWS.Zone.Types                    as AWS
+
+import qualified Fission.App.Privilege.Types               as App
+import qualified Fission.Domain.Privilege.Types            as Domain
 
 import           Fission.Internal.Orphanage.Bytes          ()
 import           Fission.Internal.Orphanage.CID            ()
@@ -223,7 +228,7 @@ DissociateAppDomainEvent
 |]
 
 ------------
--- UserId --
+-- User --
 ------------
 
 instance Arbitrary UserId where
@@ -243,7 +248,7 @@ instance ToSchema UserId where
       |> pure
 
 -----------
--- AppId --
+-- App --
 -----------
 
 instance Arbitrary AppId where

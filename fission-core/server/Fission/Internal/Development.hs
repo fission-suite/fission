@@ -8,33 +8,32 @@ module Fission.Internal.Development
   ) where
 
 import           Data.Pool
-import           Database.Persist.Sql (SqlBackend)
+import           Database.Persist.Sql                   (SqlBackend)
 
 import           Servant.Client
 
-import qualified Network.HTTP.Client     as HTTP
-import qualified Network.HTTP.Client.TLS as HTTP
+import qualified Network.HTTP.Client                    as HTTP
+import qualified Network.HTTP.Client.TLS                as HTTP
 
-import qualified Network.IPFS.Types as IPFS
+import qualified Network.IPFS.Types                     as IPFS
 
 import           Fission
 import           Fission.Prelude
 
-import qualified Fission.AWS.Types as AWS
+import qualified Fission.AWS.Types                      as AWS
 import           Fission.Web.Types
 
 import qualified Fission.Platform.Heroku.ID.Types       as Hku
 import qualified Fission.Platform.Heroku.Password.Types as Hku
 
-import           Fission.Storage.PostgreSQL.ConnectionInfo.Types
 import           Fission.Storage.PostgreSQL
 
 import           Fission.URL.Types
 import           Fission.User.DID.Types
 
-import qualified Fission.Email.SendInBlue.Types as SIB
+import qualified Fission.Email.SendInBlue.Types         as SIB
 
-import           Fission.Internal.Fixture.Key.Ed25519 as Fixture.Ed25519
+import           Fission.Internal.Fixture.Key.Ed25519   as Fixture.Ed25519
 
 {- | Setup a config, run an action in it, and tear down the config.
      Great for quick one-offs, but anything with heavy setup

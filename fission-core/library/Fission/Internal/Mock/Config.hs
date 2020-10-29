@@ -4,30 +4,26 @@ module Fission.Internal.Mock.Config
   ) where
 
 import           Network.AWS.Route53
-import qualified Network.IPFS.Types as IPFS
-import           Network.IPFS.File.Types as File
-import           Network.IPFS.Client.Pin as IPFS.Client
+import           Network.IPFS.Client.Pin               as IPFS.Client
+import           Network.IPFS.File.Types               as File
+import qualified Network.IPFS.Types                    as IPFS
 
 import           Servant
 import           Servant.Server.Experimental.Auth
 
+import qualified Fission.Platform.Heroku.Auth.Types    as Heroku
 import           Fission.Prelude
-import qualified Fission.Platform.Heroku.Auth.Types as Heroku
- 
+
 import           Fission.User.DID.Types
 
-import           Fission.Authorization.Types
-import           Fission.Authorization.Potency.Types
- 
-import           Fission.Web.Auth.Token.UCAN.Resource.Types
-import           Fission.Web.Auth.Token.UCAN.Resource.Scope.Types
- 
-import           Fission.URL.Types as URL
+import qualified Fission.Authorization                 as Authorization
 
-import           Fission.Internal.Fixture.Time        as Fixture
-import           Fission.Internal.Fixture.Entity      as Fixture
-import           Fission.Internal.Fixture.Key.Ed25519 as Fixture.Ed25519
-import           Fission.Internal.Fixture.User        as Fixture
+import           Fission.URL.Types                     as URL
+
+import           Fission.Internal.Fixture.Entity       as Fixture
+import           Fission.Internal.Fixture.Key.Ed25519  as Fixture.Ed25519
+import           Fission.Internal.Fixture.Time         as Fixture
+import           Fission.Internal.Fixture.User         as Fixture
 
 import           Fission.Internal.Mock.Config.Types
 
@@ -65,15 +61,16 @@ defaultConfig = Config
       Right $ resourceRecordSet "mock" Txt
   }
 
-authZ :: Monad m => m Authorization
-authZ = return Authorization
-    { sender   = Right did
-    , about    = Fixture.entity Fixture.user
-    , potency  = AppendOnly
-    , resource = Subset $ FissionFileSystem "/test/"
-    }
-    where
-      did = DID
-        { publicKey = Fixture.Ed25519.pk
-        , method    = Key
-        }
+authZ :: m (Authorization.Session)
+-- authZ :: Monad m => m (Authorization.Session)
+authZ = undefined -- FIXME!!
+-- authZ = return Authorization.Session
+--     { sender     = Right did
+--     , about      = Fixture.entity Fixture.user
+--     , privileges = Subset [] --FIXME add several
+--     }
+--     where
+--       did = DID
+--         { publicKey = Fixture.Ed25519.pk
+--         , method    = Key
+--         }

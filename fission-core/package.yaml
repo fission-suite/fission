@@ -1,5 +1,5 @@
 name: fission-core
-version: '2.8.3.0'
+version: '3.0.0.0'
 category: API
 author:
   - Brooklyn Zelenka
@@ -46,6 +46,7 @@ default-extensions:
   - DeriveLift
   - DeriveTraversable
   - DerivingStrategies
+  - DerivingVia
   - DuplicateRecordFields
   - EmptyDataDecls
   - FlexibleContexts
@@ -73,7 +74,7 @@ default-extensions:
   - StandaloneDeriving
   - TupleSections
   - TypeApplications
-  - TypeFamilies
+  - TypeFamilyDependencies
   - TypeSynonymInstances
   - TemplateHaskell
   - TypeOperators
@@ -85,6 +86,7 @@ dependencies:
   - flow
   - rio
   - rio-orphans
+  - stm
 
   ## Capabilties ##
   - data-default-class
@@ -93,6 +95,7 @@ dependencies:
   - monad-time
   - mtl
   - resource-pool
+  - transformers-base
   - unliftio
 
   ## Command Line ##

@@ -4,37 +4,40 @@ module Fission.Web.Auth.Token.Bearer.Types (Token (..)) where
 import           Data.Aeson.Types
 import           Servant.API
 
-import qualified RIO.ByteString.Lazy                   as Lazy
-import qualified RIO.Text                              as Text
+import qualified RIO.ByteString.Lazy                         as Lazy
+import qualified RIO.Text                                    as Text
 
-import qualified Fission.Internal.Base64.URL           as B64.URL
+import qualified Fission.Internal.Base64.URL                 as B64.URL
 import           Fission.Prelude
 
-import           Fission.Web.Auth.Token.JWT
-import qualified Fission.Web.Auth.Token.JWT.RawContent as JWT
+import qualified Fission.Web.Auth.Token.JWT.RawContent       as JWT
+
+import           Fission.Web.Auth.Token.UCAN.Fact.Types
+import           Fission.Web.Auth.Token.UCAN.Privilege.Types
+import           Fission.Web.Auth.Token.UCAN.Types
 
 data Token = Token
-  { jwt        :: !JWT            -- ^ The actual token
-  , rawContent :: !JWT.RawContent -- ^ Primarily to pass in to the verifier
+  { jwt        :: !(UCAN Privilege Fact) -- ^ The actual token
+  , rawContent :: !JWT.RawContent        -- ^ Primarily to pass in to the verifier
   }
   deriving (Show, Eq)
 
 instance Arbitrary Token where
   arbitrary = do
-    jwt@JWT {..} <- arbitrary
+    ucan@UCAN {..} <- arbitrary
     return Token
-      { jwt
-      , rawContent = RawContent $ B64.URL.encodeJWT header claims
+      { jwt = ucan
+      , rawContent = JWT.RawContent $ B64.URL.encodeJWT header claims
       }
 
 instance Display Token where
   textDisplay = Text.pack . show
 
 instance ToJSON Token where
-  toJSON (Token bs _) =
-    case toJSON bs of
+  toJSON Token {jwt} =
+    case toJSON jwt of
       String txt -> String $ "Bearer " <> txt
-      _          -> error "impossible"
+      other      -> error $ "IMPOSSIBLE CASE JWT token as a non-String: " <> show other
 
 instance FromJSON Token where
   parseJSON = withText "Bearer Token" \txt ->

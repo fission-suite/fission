@@ -11,13 +11,15 @@ import           Database.Esqueleto
 import           Servant
 
 import           Fission.Prelude
-import           Fission.Authorization
+
+import qualified Fission.Authorization                       as Auth
+import           Fission.Web.Auth.Token.UCAN.Privilege.Types
 
 import           Fission.Models
 import           Fission.URL.Types
 
-import qualified Fission.App.Destroyer.Class as App
-import qualified Fission.Web.Error as Web.Error
+import qualified Fission.App.Destroyer.Class                 as App
+import qualified Fission.Web.Error                           as Web.Error
 
 type API = ByURLAPI :<|> ByIdAPI
 
@@ -40,33 +42,39 @@ server ::
   , MonadLogger   m
   , App.Destroyer m
   )
-  => Authorization
+  => Auth.Session
   -> ServerT API m
 server auth = destroyByURL auth
          :<|> destroyById  auth
 
+-- FIXME 1. ensure that the user has rights to this app!
+-- FIXME 2. change relationship to "source" and "alias" (follower) apps
 destroyByURL ::
   ( MonadTime     m
   , MonadThrow    m
   , MonadLogger   m
   , App.Destroyer m
   )
-  => Authorization
+  => Auth.Session
   -> ServerT ByURLAPI m
-destroyByURL Authorization {about = Entity userId _} URL {..} = do
-  now <- currentTime
-  Web.Error.ensureM $ App.destroyByURL userId domainName subdomain now
-  return NoContent
+destroyByURL = undefined -- FIXME!
+-- destroyByURL Auth.Session {about = Entity userId _} URL {..} = do
+--   now <- currentTime
+--   Web.Error.ensureM $ App.destroyByURL userId domainName subdomain now
+--   return NoContent
 
+-- FIXME 1. ensure that the user has rights to this app!
+-- FIXME 2. change relationship to "source" and "alias" (follower) apps
 destroyById ::
   ( MonadTime     m
   , MonadThrow    m
   , MonadLogger   m
   , App.Destroyer m
   )
-  => Authorization
+  => Auth.Session
   -> ServerT ByIdAPI m
-destroyById Authorization {about = Entity userId _} appId = do
-  now <- currentTime
-  Web.Error.ensureM $ App.destroy userId appId now
-  return NoContent
+destroyById = undefined -- FIXME
+--destroyById Auth.Session {about = Entity userId _} appId = do
+--  now <- currentTime
+--  Web.Error.ensureM $ App.destroy userId appId now
+--  return NoContent

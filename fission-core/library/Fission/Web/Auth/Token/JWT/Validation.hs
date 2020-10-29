@@ -1,18 +1,47 @@
 module Fission.Web.Auth.Token.JWT.Validation
   ( check
-  , check'
   , pureChecks
   , checkTime
+  , checkReceiver
   , checkSignature
   , checkEd25519Signature
   , checkRSA2048Signature
   ) where
 
+import qualified RIO.ByteString                                   as BS
+import qualified RIO.Text                                         as Text
+
+import qualified Data.Bits                                        as Bits
+
+import           Fission.Web.Auth.Token.UCAN.Privilege.Types
+
+import qualified Fission.Web.Auth.Token.JWT.RawContent.Types      as JWT
+
+import qualified Fission.Web.Auth.Token.UCAN.Types                as UCAN
+
+import           Fission.Prelude
+
+import           Fission.Web.Auth.Token.JWT.Proof.Error
+
+import           Fission.Web.Auth.Token.UCAN.Attenuated.Types
+import           Fission.Web.Auth.Token.UCAN.Proof.Types
+
+-- FIXME WNFS.Types would be nice
+import qualified Fission.WNFS.Privilege.Types                     as WNFS
+import           Fission.WNFS.Subgraph.Types                      as WNFS
+
+import qualified Fission.Web.Auth.Token.UCAN.Privilege.Types      as Privilege
+
+
+
+import           Network.IPFS.CID.Types
+
+
+
 import           Crypto.Hash.Algorithms                           (SHA256 (..))
 import qualified Crypto.PubKey.Ed25519                            as Crypto.Ed25519
 import qualified Crypto.PubKey.RSA.PKCS15                         as Crypto.RSA.PKCS
 
-import           Fission.Prelude
 import           Fission.SemVer.Types
 
 import           Fission.Key                                      as Key
@@ -20,128 +49,84 @@ import qualified Fission.User                                     as User
 
 import           Fission.Authorization.ServerDID.Class
 
+-- FIXME move to proof submoule?
+import           Fission.Web.Auth.Token.JWT.Proof.Error           as UCAN.Proof
 import           Fission.Web.Auth.Token.JWT.Resolver              as Proof
 
 import           Fission.Web.Auth.Token.JWT.Claims.Error
 import           Fission.Web.Auth.Token.JWT.Header.Error
 import           Fission.Web.Auth.Token.JWT.Signature.Error
 
-import           Fission.Web.Auth.Token.JWT.Proof                 as JWT.Proof
-
 import qualified Fission.Web.Auth.Token.JWT.Signature.RS256.Types as RS256
 import           Fission.Web.Auth.Token.JWT.Signature.Types       as Signature
 
-import           Fission.Web.Auth.Token.JWT                       as JWT
 import           Fission.Web.Auth.Token.JWT.Error                 as JWT
 
+import           Fission.Web.Auth.Token.UCAN.Types
+
 check ::
-  ( Proof.Resolver m
-  , ServerDID      m
-  , MonadTime      m
+  ( m `Proof.Resolves` UCAN privilege fact
+  , MonadTime m
   )
   => JWT.RawContent
-  -> JWT
-  -> m (Either JWT.Error JWT)
-check rawContent jwt = do
-  now <- currentTime
-  case checkTime now jwt of
-    Left err ->
-      return $ Left err
-
-    Right _  ->
-      checkReceiver jwt >>= \case
-        Left  err -> return $ Left err
-        Right _   -> check' rawContent jwt now
-
-check' ::
-  ( ServerDID      m
-  , Proof.Resolver m
-  )
-  => JWT.RawContent
-  -> JWT
-  -> UTCTime
-  -> m (Either JWT.Error JWT)
-check' raw jwt now =
-  case pureChecks raw jwt of
-    Left  err -> return $ Left err
-    Right _   -> checkProof now jwt
+  -> UCAN privilege fact
+  -> m (Either JWT.Error (UCAN privilege fact))
+check rawContent jwt = pureChecks rawContent jwt <$> currentTime
 
 pureChecks ::
      JWT.RawContent
-  -> JWT
-  -> Either JWT.Error JWT
-pureChecks raw jwt = do
+  -> UCAN privilege fact
+  -> UTCTime
+  -> Either JWT.Error (UCAN privilege fact)
+pureChecks raw jwt now = do
   _ <- checkVersion  jwt
+  _ <- checkTime now jwt
   checkSignature raw jwt
 
-checkReceiver :: ServerDID m => JWT -> m (Either JWT.Error JWT)
-checkReceiver jwt@JWT {claims = JWT.Claims {receiver}} = do
+checkReceiver :: -- FIXME run on the first level UCAN before this kickoff
+  ServerDID m
+  => UCAN privilege fact
+  -> m (Either JWT.Error (UCAN privilege fact))
+checkReceiver ucan@UCAN {claims = UCAN.Claims {receiver}} = do
   serverDID <- getServerDID
   return if receiver == serverDID
-    then Right jwt
+    then Right ucan
     else Left $ ClaimsError IncorrectReceiver
 
-checkVersion :: JWT -> Either JWT.Error JWT
-checkVersion jwt@JWT { header = JWT.Header {uav = SemVer mjr mnr pch}} =
-  if mjr == 1 && mnr >= 0 && pch >= 0
-    then Right jwt
+checkVersion :: UCAN privilege fact -> Either JWT.Error (UCAN privilege fact)
+checkVersion ucan@UCAN { header = UCAN.Header {ucv = SemVer mjr mnr pch}} =
+  if mjr == 0 && mnr >=4 && pch >= 0
+    then Right ucan
     else Left $ JWT.HeaderError UnsupportedVersion
 
-checkProof ::
-  ( ServerDID      m
-  , Proof.Resolver m
-  )
-  => UTCTime
-  -> JWT
-  -> m (Either JWT.Error JWT)
-checkProof now jwt@JWT {claims = Claims {proof}} =
-  case proof of
-    RootCredential ->
-      return $ Right jwt
-
-    Reference cid ->
-      Proof.resolve cid >>= \case
-        Left err ->
-          return . Left . JWT.ClaimsError . ProofError . JWT.Proof.ResolverError $ err
-
-        Right (rawProof, proofJWT) ->
-          check' rawProof proofJWT now <&> \case
-            Left err -> Left err
-            Right _  -> checkDelegate proofJWT
-
-    Nested rawProof proofJWT ->
-      check' rawProof proofJWT now <&> \case
-        Left err -> Left err
-        Right _  -> checkDelegate proofJWT
-
-    where
-      checkDelegate proofJWT =
-        case JWT.Proof.delegatedInBounds jwt proofJWT of
-          Left err -> Left . JWT.ClaimsError $ ProofError err
-          Right _  -> Right jwt
-
-checkTime :: UTCTime -> JWT -> Either JWT.Error JWT
-checkTime now jwt@JWT {claims = JWT.Claims { exp, nbf }} = do
+checkTime ::
+     UTCTime
+  -> UCAN privilege fact
+  -> Either JWT.Error (UCAN privilege fact)
+checkTime now ucan@UCAN {claims = UCAN.Claims { exp, nbf }} = do
   if | now > exp -> Left $ JWT.ClaimsError Expired
      | now < nbf -> Left $ JWT.ClaimsError TooEarly
-     | otherwise -> Right jwt
+     | otherwise -> Right ucan
 
-checkSignature :: JWT.RawContent -> JWT -> Either JWT.Error JWT
-checkSignature rawContent jwt@JWT {sig} =
+checkSignature ::
+     JWT.RawContent
+  -> UCAN privilege fact
+  -> Either JWT.Error (UCAN privilege fact)
+checkSignature rawContent ucan@UCAN {sig} =
   case sig of
-    Signature.Ed25519 _        -> checkEd25519Signature rawContent jwt
-    Signature.RS256   rs256Sig -> checkRSA2048Signature rawContent jwt rs256Sig
+    Signature.Ed25519 _        -> checkEd25519Signature rawContent ucan
+    Signature.RS256   rs256Sig -> checkRSA2048Signature rawContent ucan rs256Sig
 
 checkRSA2048Signature ::
      JWT.RawContent
-  -> JWT
+  -> UCAN privilege fact
   -> RS256.Signature
-  -> Either JWT.Error JWT
-checkRSA2048Signature (JWT.RawContent raw) jwt@JWT {..} (RS256.Signature innerSig) = do
+  -> Either JWT.Error (UCAN privilege fact)
+checkRSA2048Signature (JWT.RawContent raw) ucan@UCAN {..} (RS256.Signature innerSig) = do
   case publicKey of
     RSAPublicKey pk ->
       if Crypto.RSA.PKCS.verify (Just SHA256) pk content innerSig
-        then Right jwt
+        then Right ucan
         else Left $ JWT.SignatureError SignatureDoesNotMatch
 
     _ ->
@@ -151,12 +136,15 @@ checkRSA2048Signature (JWT.RawContent raw) jwt@JWT {..} (RS256.Signature innerSi
     content = encodeUtf8 raw
     Claims {sender = User.DID {publicKey}} = claims
 
-checkEd25519Signature :: JWT.RawContent -> JWT -> Either JWT.Error JWT
-checkEd25519Signature (JWT.RawContent raw) jwt@JWT {..} =
+checkEd25519Signature ::
+     JWT.RawContent
+  -> UCAN privilege fact
+  -> Either JWT.Error (UCAN privilege fact)
+checkEd25519Signature (JWT.RawContent raw) ucan@UCAN {..} =
   case (publicKey, sig) of
     (Ed25519PublicKey pk, Signature.Ed25519 edSig) ->
       if Crypto.Ed25519.verify pk (encodeUtf8 raw) edSig
-        then Right jwt
+        then Right ucan
         else Left $ JWT.SignatureError SignatureDoesNotMatch
 
     (_, _) ->
@@ -164,3 +152,25 @@ checkEd25519Signature (JWT.RawContent raw) jwt@JWT {..} =
 
   where
     Claims {sender = User.DID {publicKey}} = claims
+
+signaturesMatch ::
+     UCAN privilege fact
+  -> UCAN privilege fact
+  -> Either JWT.Error (UCAN privilege fact)
+signaturesMatch jwt prfJWT =
+  if (jwt |> claims |> sender) == (prfJWT |> claims |> receiver)
+    then Right jwt
+    else Left . ClaimsError $ ProofError InvalidSignatureChain
+
+timeInSubset ::
+     UCAN privilege fact
+  -> UCAN privilege fact
+  -> Either JWT.Error (UCAN privilege fact)
+timeInSubset jwt prfJWT =
+  if startBoundry && expiryBoundry
+    then Right jwt
+    else Left . ClaimsError $ ProofError TimeNotSubset
+
+  where
+    startBoundry  = (jwt |> claims |> nbf) >= (prfJWT |> claims |> nbf)
+    expiryBoundry = (jwt |> claims |> exp) <= (prfJWT |> claims |> exp)

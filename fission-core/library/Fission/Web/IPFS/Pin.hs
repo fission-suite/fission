@@ -11,16 +11,17 @@ import           Database.Esqueleto
 import           Servant
 
 import           Network.IPFS
-import qualified Network.IPFS.Pin   as IPFS.Pin
 import           Network.IPFS.CID.Types
+import qualified Network.IPFS.Pin                           as IPFS.Pin
 
 import           Fission.Prelude
 
-import           Fission.Authorization.Types
+import qualified Fission.Authorization                      as Authorization
 import           Fission.Models
+import           Fission.Web.Auth.Token.UCAN.Resource.Types
 
-import qualified Fission.Web.Error as Web.Err
-import qualified Fission.LoosePin  as LoosePin
+import qualified Fission.LoosePin                           as LoosePin
+import qualified Fission.Web.Error                          as Web.Err
 
 type API = PinAPI :<|> UnpinAPI
 
@@ -46,9 +47,12 @@ server ::
   , LoosePin.Retriever t
   , LoosePin.Destroyer t
   )
-  => Authorization
+  => Authorization.Session
   -> ServerT API m
-server Authorization {about = Entity userId _} = pin userId :<|> unpin userId
+-- server Authorization {about = Entity userId _} = pin userId :<|> unpin userId
+server Authorization.Session {} = do
+  let userId = undefined -- FIXME
+  pin userId :<|> unpin userId
 
 pin ::
   ( MonadRemoteIPFS    m

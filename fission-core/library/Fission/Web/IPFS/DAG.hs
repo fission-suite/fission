@@ -6,18 +6,20 @@ where
 
 import           Database.Esqueleto
 import           Servant
- 
-import           Fission.Prelude
-import           Fission.Authorization.Types
 
-import           Fission.LoosePin.Creator as LoosePin
-import qualified Fission.Web.Error        as Web.Err
+import           Fission.Prelude
+
+import qualified Fission.Authorization                      as Authorization
+import           Fission.Web.Auth.Token.UCAN.Resource.Types
+
+import           Fission.LoosePin.Creator                   as LoosePin
+import qualified Fission.Web.Error                          as Web.Err
 
 import           Network.IPFS
-import           Network.IPFS.File.Types as File
-import qualified Network.IPFS.Types      as IPFS
-import qualified Network.IPFS.DAG        as IPFS.DAG
-import qualified Network.IPFS.Pin        as IPFS.Pin
+import qualified Network.IPFS.DAG                           as IPFS.DAG
+import           Network.IPFS.File.Types                    as File
+import qualified Network.IPFS.Pin                           as IPFS.Pin
+import qualified Network.IPFS.Types                         as IPFS
 
 type API
   =  Summary "Pin an IPFS DAG structure"
@@ -34,9 +36,10 @@ put ::
   , MonadDB          t m
   , LoosePin.Creator t
   )
-  => Authorization
+  => Authorization.Session
   -> ServerT API m
-put Authorization {about = Entity userId _} (Serialized rawData) =
+put Authorization.Session {} (Serialized rawData) =
+-- put Authorization {about = Entity userId _} (Serialized rawData) =
   IPFS.DAG.put rawData >>= \case
     Left err ->
       Web.Err.throw err
@@ -47,6 +50,7 @@ put Authorization {about = Entity userId _} (Serialized rawData) =
           Web.Err.throw err
 
         Right pinnedCID -> do
+          let userId = undefined -- FIXME
           newCID
             |> return
             |> LoosePin.createMany userId

@@ -27,16 +27,18 @@ import qualified Network.IPFS.Get.Error                as IPFS.Stat
 import qualified Fission.App.Domain                    as App.Domain
 
 type Errors' = OpenUnion
-  '[ ActionNotAuthorized App
-   , NotFound            App
+  '[ UserNotAuthorized App
+   , NotFound          App
 
-   , ActionNotAuthorized URL
-   , NotFound            URL
+   , UserNotAuthorized URL
+   , NotFound          URL
 
    , AlreadyExists HerokuAddOn
    , App.Domain.AlreadyAssociated
 
-   , User.AlreadyExists
+   , AlreadyExists Username
+   , AlreadyExists Key.Public
+
    , NotFound User
 
    , Username.Invalid

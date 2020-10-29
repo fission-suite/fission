@@ -11,46 +11,48 @@ import           Control.Monad.Catch
 import           Control.Monad.Trans.AWS
 import           Control.Monad.Writer
 
-import           Database.Esqueleto                  as Database
+import           Database.Esqueleto                         as Database
 
 import           Network.IPFS.Local.Class
 import           Network.IPFS.Remote.Class
-import qualified Network.IPFS.Types                  as IPFS
+import qualified Network.IPFS.Types                         as IPFS
 
 import           Network.AWS
 
 import           Servant.Client
 import           Servant.Server
 
-import           Fission.Internal.Fixture            as Fixture
-import           Fission.Internal.Mock.Config.Types  as Mock
-import           Fission.Internal.Mock.Effect        as Effect
+import           Fission.Internal.Fixture                   as Fixture
+import           Fission.Internal.Mock.Config.Types         as Mock
+import           Fission.Internal.Mock.Effect               as Effect
 import           Fission.Internal.Mock.Session.Types
 
 import           Fission.Prelude
 
-import           Fission.Authorization.Types
+import           Fission.Authorization                      as Authorization
 import           Fission.URL
+import           Fission.Web.Auth.Token.UCAN.Resource.Types
 
 import           Fission.IPFS.DNSLink.Class
 import           Fission.IPFS.Linked.Class
 
 import           Fission.Models
 import           Fission.User.DID.Types
+import           Fission.User.Username.Types
 
 import           Fission.Web.Auth.Class
 
 import           Fission.Web.Server.Reflective.Class
-import qualified Fission.Web.Types                   as Web
+import qualified Fission.Web.Types                          as Web
 
 import           Fission.Web.Auth.Token.Basic.Class
 
 import           Fission.AWS
-import qualified Fission.Platform.Heroku.Auth.Types  as Heroku
+import qualified Fission.Platform.Heroku.Auth.Types         as Heroku
 
-import           Fission.LoosePin                    as LoosePin
-import           Fission.Platform.Heroku.AddOn       as Heroku.AddOn
-import           Fission.User                        as User
+import           Fission.LoosePin                           as LoosePin
+import           Fission.Platform.Heroku.AddOn              as Heroku.AddOn
+import           Fission.User                               as User
 
 -- Reexport
 
@@ -105,7 +107,7 @@ instance MonadAuth DID (Mock effs) where
 instance MonadAuth (Entity User) (Mock effs) where
   getVerifier = asks userVerifier
 
-instance MonadAuth Authorization (Mock effs) where
+instance MonadAuth Authorization.Session (Mock effs) where
   getVerifier = asks authVerifier
 
 instance IsMember RunAWS effs => MonadAWS (Mock effs) where
@@ -247,25 +249,25 @@ instance
     Effect.log $ CreateHerokuAddOn uuid
     return . Right $ Database.toSqlKey 0
 
-instance IsMember ModifyUser effs => User.Modifier (Mock effs) where
+instance ModifyUser `IsMember` effs => User.Modifier (Mock effs) where
   updatePassword uID password _ = do
-    Effect.log $ ModifyUser uID
+    Effect.log $ ModifyUserById uID
     return $ Right password
 
   updatePublicKey uID newPK _ = do
-    Effect.log $ ModifyUser uID
+    Effect.log $ ModifyUserById uID
     return $ Right newPK
 
   addExchangeKey uID key _ = do
-    Effect.log $ ModifyUser uID
+    Effect.log $ ModifyUserById uID
     return $ Right [key]
 
   removeExchangeKey uID _ _ = do
-    Effect.log $ ModifyUser uID
+    Effect.log $ ModifyUserById uID
     return $ Right []
 
-  setData uID _ _ = do
-    Effect.log $ ModifyUser uID
+  setData username _ _ = do
+    Effect.log $ ModifyUserByUsername username
     return ok
 
 instance IsMember DestroyUser effs => User.Destroyer (Mock effs) where

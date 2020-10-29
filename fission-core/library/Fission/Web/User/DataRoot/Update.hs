@@ -4,32 +4,42 @@ module Fission.Web.User.DataRoot.Update
   ) where
 
 import           Database.Esqueleto
+import           Network.IPFS.CID.Types
 import           Servant
 
 import           Fission.Prelude
-import           Fission.Authorization
 
-import           Fission.Web.Error as Web.Error
-import qualified Fission.User as User
+import           Fission.Config.Types
 
-import           Network.IPFS.CID.Types
+import qualified Fission.Authorization                      as Authorization
+import           Fission.Authorization.Session.Trans
+import           Fission.Web.Auth.Token.UCAN.Resource.Types
 
+import           Fission.Authorization.Session.Class
+
+import qualified Fission.User                               as User
+import           Fission.Web.Error                          as Web.Error
+
+import           Fission.WNFS.Privilege.Types               as WNFS
 
 type API
   =  Summary "Update data root"
-  :> Description "Set/update currently authenticated user's file system content"
-  :> Capture "newCID" CID
+  :> Description "Set/update user's file system content"
+  :> Capture "username" User.Username
+  :> Capture "newCID"   CID
   :> PatchNoContent '[PlainText, OctetStream, JSON] NoContent
 
 server ::
-  ( MonadLogger     m
-  , MonadThrow      m
-  , MonadTime       m
-  , User.Modifier   m
+  ( MonadLogger   m
+  , MonadThrow    m
+  , MonadSTM      m
+  , MonadTime     m
+  , User.Modifier m
   )
-  => Authorization
+  => Authorization.Session
   -> ServerT API m
-server Authorization {about = Entity userID _} newCID = do
-  now <- currentTime
-  Web.Error.ensureM $ User.setData userID newCID now
-  return NoContent
+server session username newCID =
+  runSessionT session do
+    now <- currentTime
+    Web.Error.ensureM $ User.setData username newCID now
+    return NoContent

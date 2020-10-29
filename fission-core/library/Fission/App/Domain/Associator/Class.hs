@@ -19,8 +19,8 @@ import qualified Fission.Error            as Error
 
 type Errors' = OpenUnion
   '[ AppDomain.AlreadyAssociated
-   , ActionNotAuthorized App
-   , NotFound            App
+   , UserNotAuthorized App
+   , NotFound          App
    ]
 
 class Monad m => Associator m where
@@ -40,9 +40,9 @@ instance MonadIO m => Associator (Transaction m) where
         return $ relaxedLeft err
 
       Right (Entity _ app) ->
-        case isOwnedBy userId app of
+        case app `isOwnedBy` userId of
           False ->
-            return . Error.openLeft $ ActionNotAuthorized @App userId
+            return . Error.openLeft $ UserNotAuthorized @App userId
 
           True -> do
             insert_ AssociateAppDomainEvent

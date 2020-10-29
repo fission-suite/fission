@@ -3,17 +3,18 @@ module Fission.Web.App.Index
   , index
   ) where
 
-import           RIO.Map as Map
+import           RIO.Map                                    as Map
 import           Servant
 
+import qualified Fission.Authorization                      as Authorization
 import           Fission.Prelude
-import           Fission.Authorization
+import           Fission.Web.Auth.Token.UCAN.Resource.Types
 
 import           Fission.Models
 import           Fission.URL.Types
 
-import qualified Fission.App        as App
-import qualified Fission.App.Domain as App.Domain
+import qualified Fission.App                                as App
+import qualified Fission.App.Domain                         as App.Domain
 
 type API
   =  Summary "App index"
@@ -25,9 +26,12 @@ index ::
   , App.Retriever        t
   , App.Domain.Retriever t
   )
-  => Authorization
+  => Authorization.Session
   -> ServerT API m
-index Authorization {about = Entity userId _} = runDB do
+index Authorization.Session {} = runDB do
+-- index Authorization {about = Entity userId _} = runDB do
+  let userId = undefined -- FIXME
+
   apps        <- App.ownedBy userId
   appXDomains <- forM apps findDomains
   return (Map.fromList appXDomains)

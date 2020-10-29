@@ -1,11 +1,11 @@
 module Fission.URL.DomainName.Types (DomainName (..)) where
 
-import qualified RIO.ByteString.Lazy as Lazy
-import qualified RIO.Char            as Char
-import qualified RIO.Text            as Text
+import qualified RIO.ByteString.Lazy         as Lazy
+import qualified RIO.Char                    as Char
+import qualified RIO.Text                    as Text
 
-import           Database.Persist.Postgresql hiding (get)
 import           Data.Swagger                hiding (get, host)
+import           Database.Persist.Postgresql hiding (get)
 
 import           Servant
 
@@ -13,14 +13,13 @@ import           Fission.Prelude
 
 -- | Type safety wrapper for domain names
 newtype DomainName = DomainName { get :: Text }
-  deriving          ( Eq
-                    , Generic
-                    , Show
+  deriving          ( Show
                     , Read
-                    , Ord
                     )
   deriving newtype  ( IsString
                     , PathPiece
+                    , Eq
+                    , Ord
                     )
 
 instance Arbitrary DomainName where
@@ -32,6 +31,12 @@ instance Arbitrary DomainName where
 
 instance Display DomainName where
   textDisplay (DomainName txt) = txt
+
+instance PartialOrder DomainName where
+  relationship dnA dnB =
+    if dnA == dnB
+      then Equal
+      else Sibling
 
 instance PersistField DomainName where
   toPersistValue (DomainName name') = PersistText name'
