@@ -68,6 +68,13 @@ packages:
   original:
     hackage: rescue-0.4.2.1
 - completed:
+    hackage: servant-ekg-0.3.1@sha256:19bd9dc3943983da8e79d6f607614c68faea4054fb889d508c8a2b67b6bdd448,2203
+    pantry-tree:
+      size: 552
+      sha256: 432766c31fdcd06fd2102d4d0ac63217c880d80d3bef4ad64b5b2ed95f8af355
+  original:
+    hackage: servant-ekg-0.3.1
+- completed:
     hackage: servant-swagger-ui-redoc-0.3.4.1.22.3@sha256:c19967101d9205b1a936fad254f22f02c471953c10b1137364a4589e121f0562,1474
     pantry-tree:
       size: 381
