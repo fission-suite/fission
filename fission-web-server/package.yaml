@@ -1,5 +1,5 @@
 name: fission-web-server
-version: '2.14.1.0'
+version: '2.15.0.0'
 category: API
 author:
   - Brooklyn Zelenka
@@ -151,13 +151,18 @@ dependencies:
   - amazonka-route53
   - hostname
 
+  ## Monitoring
+  - ekg-core
+  - ekg-statsd
+  - raven-haskell
+  - servant-ekg
+
   ## Web ##
   - http-client
   - http-client-tls
   - http-media
   - http-types
   - ipfs
-  - raven-haskell
   - servant
   - servant-auth-server
   - servant-auth-swagger

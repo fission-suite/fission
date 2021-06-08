@@ -68,6 +68,13 @@ packages:
   original:
     hackage: rescue-0.4.2.1
 - completed:
+    hackage: servant-ekg-0.3.1@sha256:19bd9dc3943983da8e79d6f607614c68faea4054fb889d508c8a2b67b6bdd448,2203
+    pantry-tree:
+      size: 552
+      sha256: 432766c31fdcd06fd2102d4d0ac63217c880d80d3bef4ad64b5b2ed95f8af355
+  original:
+    hackage: servant-ekg-0.3.1
+- completed:
     hackage: servant-swagger-ui-redoc-0.3.4.1.22.3@sha256:c19967101d9205b1a936fad254f22f02c471953c10b1137364a4589e121f0562,1474
     pantry-tree:
       size: 381
@@ -90,7 +97,7 @@ packages:
     hackage: unliftio-core-0.1.2.0
 snapshots:
 - completed:
-    size: 567669
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/12.yaml
-    sha256: facf6cac73b22a83ca955b580a98a7a09ed71f8f974c7a55d28e608c23e689a9
-  original: lts-17.12
+    size: 567679
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/15.yaml
+    sha256: 72e87841a0ab5b72f6f018e8ee692fd972b7bb32a944990f028e10d6eb528e63
+  original: lts-17.15
