@@ -285,19 +285,27 @@ instance MonadWNFS Server where
 
 instance MonadDNSLink Server where
   set _userId url@URL {..} zoneID (IPFS.CID hash) = do
+    -- Ensure that the gateway is available first
     Route53.set Cname url zoneID (pure $ textDisplay gateway) 86400 >>= \case
       Left err ->
         return $ Error.openLeft err
 
       Right _ ->
-        Route53.set Txt dnsLinkURL zoneID (pure dnsLink) 10 <&> \case
+        Route53.set Txt (DNSLink.toDNSLink url) zoneID (pure dnsLink) 10 <&> \case
           Left err -> Error.openLeft err
           Right _  -> Right url
 
     where
       gateway    = URL { domainName, subdomain = Just (Subdomain "gateway") }
-      dnsLinkURL = URL.prefix' (URL.Subdomain "_dnslink") url
       dnsLink    = "dnslink=/ipfs/" <> hash
+
+  unset _userId url zoneID = do
+    logDebug $ "Unsetting DNSLink at _dnslink." <> display url
+
+    -- NOTE does NOT unset the gateway CNAME
+    Route53.clear (DNSLink.toDNSLink url) zoneID >>= \case
+      Left err -> return $ Error.openLeft err
+      Right _  -> return $ Right ()
 
   follow _userId url@URL {..} zoneID followeeURL = do
     Route53.set Cname url zoneID (pure $ textDisplay gateway) 86400 >>= \case
@@ -305,14 +313,13 @@ instance MonadDNSLink Server where
         return $ Error.openLeft err
 
       Right _ ->
-        Route53.set Txt dnsLinkURL zoneID (pure dnsLink) 10 <&> \case
+        Route53.set Txt (DNSLink.toDNSLink url) zoneID (pure dnsLink) 10 <&> \case
           Left err -> Error.openLeft err
           Right _  -> Right ()
 
     where
-      gateway    = URL { domainName, subdomain = Just (Subdomain "gateway") }
-      dnsLinkURL = URL.prefix' (URL.Subdomain "_dnslink") url
-      dnsLink    = "dnslink=/ipns/" <> textDisplay followeeURL
+      gateway = URL { domainName, subdomain = Just (Subdomain "gateway") }
+      dnsLink = "dnslink=/ipns/" <> textDisplay followeeURL
 
 instance MonadLinkedIPFS Server where
   getLinkedPeers = asks ipfsRemotePeers
@@ -681,12 +688,12 @@ instance App.Destroyer Server where
   destroy uId appId now =
     runDB (App.destroy uId appId now) >>= \case
       Left err   -> return $ Left err
-      Right urls -> pullFromDNS urls
+      Right urls -> pullAppFromDNS uId urls
 
   destroyByURL uId domainName maySubdomain now =
     runDB (App.destroyByURL uId domainName maySubdomain now) >>= \case
       Left err   -> return $ Left err
-      Right urls -> pullFromDNS urls
+      Right urls -> pullAppFromDNS uId urls
 
 instance Heroku.AddOn.Creator Server where
   create uuid region now = runDB $ Heroku.AddOn.create uuid region now
@@ -731,8 +738,8 @@ instance MonadEmail Server where
     mapLeft Email.CouldNotSend <$>
       liftIO (runClientM (Email.sendEmail apiKey emailData) env)
 
-pullFromDNS :: [URL] -> Server (Either App.Destroyer.Errors' [URL])
-pullFromDNS urls = do
+pullAppFromDNS :: UserId -> [URL] -> Server (Either App.Destroyer.Errors' [URL])
+pullAppFromDNS userId urls = do
   domainsAndZoneIDs <- runDB . select $ from \domain -> do
     where_ $ domain ^. DomainDomainName `in_` valList (URL.domainName <$> urls)
     return (domain ^. DomainDomainName, domain ^. DomainZoneId)
@@ -761,9 +768,19 @@ pullFromDNS urls = do
           return . Error.openLeft $ NotFound @ZoneID
 
         Just zoneId ->
-          AWS.clear url zoneId <&> \case
-            Left err -> Error.openLeft err
-            Right _  -> Right (url : accs)
+          AWS.clear url zoneId >>= \case
+            Left err ->
+              return $ Error.openLeft err
+
+            Right _  ->
+              Route53.get (DNSLink.toDNSLink url) zoneId >>= \case
+                Left _ ->
+                  return $ Right (url : accs)
+
+                Right _ ->
+                  DNSLink.unset userId url zoneId >>= \case
+                    Left err -> return $ Error.relaxedLeft err
+                    Right _  -> return $ Right (url : accs)
 
 runUserUpdate ::
      Transaction Server (Either User.Modifier.Errors' a)
